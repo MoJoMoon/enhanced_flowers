@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced VR Flower Passthrough Experience</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        #ui h2 {
+            margin-top: 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255,107,107,0.5);
+        }
+        
+        #nameInput {
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 18px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            color: white;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        #nameInput:focus {
+            outline: none;
+            border: 2px solid #4ecdc4;
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 0 20px rgba(78,205,196,0.3);
+        }
+        
+        #nameInput::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+            min-width: 160px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        #vrButton {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            width: calc(100% - 16px);
+            margin-top: 20px;
+            font-size: 18px;
+            padding: 18px;
+        }
+        
+        #audioButton {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .passthrough-button {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(250, 112, 154, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(250, 112, 154, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(250, 112, 154, 0); }
+        }
+        
+        .flower-button {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        }
+        
+        .heart-button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+        }
+        
+        .garden-button {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+        
+        .walkable-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 2px solid #4ecdc4;
+        }
+        
+        #vrStatus {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            display: none;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 400px;
+        }
+        
+        #loadingIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            display: block;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 20px;
+            max-width: 500px;
+            backdrop-filter: blur(15px);
+            font-size: 14px;
+            line-height: 1.8;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .section-title {
+            color: #4ecdc4;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .feature-highlight {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4ecdc4;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .button-row button {
+            flex: 1;
+            margin: 0;
+            min-width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h2>🌺✨ VR Flower Magic</h2>
+        <input type="text" id="nameInput" placeholder="Enter your friend's name..." value="SARAH">
+        
+        <div class="button-row">
+            <button class="flower-button" onclick="createFlowerBouquet()">🌸 Name Bouquet</button>
+            <button class="heart-button" onclick="createFlowerHeart()">💖 Flower Heart</button>
+        </div>
+        
+        <div class="button-row">
+            <button class="garden-button" onclick="createSpiralGarden()">🌻 Spiral Garden</button>
+            <button class="walkable-button" onclick="createWalkableBouquet()">🚶‍♀️ Walk-Through Garden</button>
+        </div>
+        
+        <div class="button-row">
+            <button onclick="createRainbowFlowers()">🌈 Rainbow Flowers</button>
+            <button onclick="createFloatingGarden()">☁️ Floating Garden</button>
+        </div>
+        
+        <div class="button-row">
+            <button onclick="toggleAudio()" id="audioButton">🔊 Enable Ambient Sounds</button>
+            <button class="passthrough-button" onclick="togglePassthrough()">👁️ Toggle Passthrough Mode</button>
+        </div>
+        
+        <button id="vrButton" onclick="enterVR()">🥽 Enter VR Experience</button>
+    </div>
+    
+    <div id="loadingIndicator">
+        <h3>🌸 Loading Magical Garden...</h3>
+        <div class="loading-spinner"></div>
+        <p>Preparing your immersive flower experience...</p>
+    </div>
+    
+    <div id="vrStatus">
+        <h3>VR Status</h3>
+        <p id="vrMessage">Checking VR support...</p>
+    </div>
+    
+    <div id="instructions">
+        <div class="section-title">🖥️ Desktop Controls:</div>
+        • Enter a name and create beautiful flower arrangements<br>
+        • <span class="feature-highlight">Walk-Through Garden</span>: Creates life-sized flowers you can walk between<br>
+        • Use WASD to move, mouse to look around<br>
+        • Click to lock mouse for smooth camera control<br><br>
+        
+        <div class="section-title">🥽 Meta Quest 2 VR Controls:</div>
+        • <span class="feature-highlight">Passthrough Mode</span>: See your real environment with virtual flowers overlaid<br>
+        • <span class="feature-highlight">Right Thumbstick</span>: Move forward/back/left/right in VR space<br>
+        • <span class="feature-highlight">Left Thumbstick</span>: Turn and look around smoothly<br>
+        • <span class="feature-highlight">Trigger Buttons</span>: Touch flowers to make them bloom and react<br>
+        • <span class="feature-highlight">Grip Buttons</span>: Pick up and move flowers around<br>
+        • Natural head movement for immersive looking around<br><br>
+        
+        <div class="section-title">✨ Special Features:</div>
+        • <span class="feature-highlight">Passthrough Magic</span>: Flowers appear in your real space<br>
+        • <span class="feature-highlight">Interactive Blooms</span>: Touch flowers to see them react<br>
+        • <span class="feature-highlight">Ambient Sounds</span>: Birds, wind, and magical chimes<br>
+        • <span class="feature-highlight">Walk-Through Size</span>: Flowers sized for walking between them
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, flowers = [], interactiveFlowers = [];
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let controller1, controller2, controllerGrip1, controllerGrip2;
+        let vrMovement = { x: 0, z: 0 };
+        let dolly, cameraRig;
+        let audioContext, audioEnabled = false;
+        let windSound, birdSounds = [], harpSynth, magicSynth;
+        let passthroughEnabled = false;
+        let selectedFlower = null;
+        let raycaster = new THREE.Raycaster();
+        let tempMatrix = new THREE.Matrix4();
+        
+        // Enhanced particle systems
+        let particleSystem, magicParticles, petalParticles;
+        
+        // Animation mixers for complex animations
+        let animationMixers = [];
+        
+        // Initialize everything
+        async function init() {
+            try {
+                console.log('Starting enhanced initialization...');
+                
+                // Create scene with better atmosphere
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x87CEEB);
+                scene.fog = new THREE.Fog(0x87CEEB, 5, 30);
+                
+                // Create camera with better positioning
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 1.6, 8);
+                
+                // Enhanced renderer settings
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.xr.enabled = true;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.outputEncoding = THREE.sRGBEncoding;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.2;
+                renderer.physicallyCorrectLights = true;
+                
+                document.body.appendChild(renderer.domElement);
+                
+                // Check VR support
+                await checkVRSupport();
+                
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                // Enhanced lighting setup
+                setupEnhancedLighting();
+                
+                // Create more realistic ground
+                createEnhancedGround();
+                
+                // Setup VR controllers with better interaction
+                setupEnhancedVRControllers();
+                
+                // Setup desktop controls
+                setupControls();
+                
+                // Setup enhanced audio
+                setupEnhancedAudio();
+                
+                // Create multiple particle systems
+                createEnhancedParticles();
+                
+                // Start animation loop
+                renderer.setAnimationLoop(animate);
+                
+                // Create initial walkable bouquet for immersion
+                createWalkableBouquet();
+                
+                console.log('Enhanced initialization complete!');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                const loadingEl = document.getElementById('loadingIndicator');
+                if (loadingEl) {
+                    loadingEl.innerHTML = '<h3>❌ Loading Error</h3><p>Please refresh and try again.</p>';
+                }
+            }
+        }
+        
+        function setupEnhancedLighting() {
+            // Enhanced ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            // Main directional light (sun) with better shadows
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            directionalLight.position.set(15, 25, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -30;
+            directionalLight.shadow.camera.right = 30;
+            directionalLight.shadow.camera.top = 30;
+            directionalLight.shadow.camera.bottom = -30;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 100;
+            directionalLight.shadow.mapSize.width = 4096;
+            directionalLight.shadow.mapSize.height = 4096;
+            directionalLight.shadow.bias = -0.0001;
+            scene.add(directionalLight);
+            
+            // Multiple colored accent lights for magic atmosphere
+            const lights = [
+                { color: 0xff69b4, position: [8, 4, 8], intensity: 0.8 },
+                { color: 0x4169e1, position: [-8, 4, -8], intensity: 0.8 },
+                { color: 0x32cd32, position: [8, 4, -8], intensity: 0.6 },
+                { color: 0xffd700, position: [-8, 4, 8], intensity: 0.6 },
+                { color: 0xff6347, position: [0, 6, 0], intensity: 0.4 }
+            ];
+            
+            lights.forEach(lightConfig => {
+                const light = new THREE.PointLight(lightConfig.color, lightConfig.intensity, 15);
+                light.position.set(...lightConfig.position);
+                scene.add(light);
+            });
+            
+            // Add hemisphere light for better overall illumination
+            const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a5f3a, 0.4);
+            scene.add(hemisphereLight);
+        }
+        
+        function createEnhancedGround() {
+            // Create multiple ground layers for depth
+            const groundGeometry = new THREE.PlaneGeometry(200, 200, 100, 100);
+            
+            // Add natural height variation
+            const vertices = groundGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                vertices[i + 2] = Math.random() * 0.5 - 0.1;
+            }
+            groundGeometry.computeVertexNormals();
+            
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x3a5f3a,
+                transparent: true,
+                opacity: passthroughEnabled ? 0.2 : 0.9
+            });
+            
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            ground.name = 'ground';
+            scene.add(ground);
+            
+            // Add varied grass patches with different shades
+            const grassColors = [0x4a7c4a, 0x5d8e5d, 0x6fa06f, 0x82b382];
+            for (let i = 0; i < 100; i++) {
+                const grassPatch = new THREE.Mesh(
+                    new THREE.PlaneGeometry(3, 3),
+                    new THREE.MeshLambertMaterial({ 
+                        color: grassColors[Math.floor(Math.random() * grassColors.length)],
+                        transparent: true,
+                        opacity: passthroughEnabled ? 0.15 : 0.7
+                    })
+                );
+                grassPatch.rotation.x = -Math.PI / 2;
+                grassPatch.position.set(
+                    (Math.random() - 0.5) * 80,
+                    0.01,
+                    (Math.random() - 0.5) * 80
+                );
+                grassPatch.receiveShadow = true;
+                scene.add(grassPatch);
+            }
+            
+            // Add some rocks and natural elements
+            for (let i = 0; i < 20; i++) {
+                const rockGeometry = new THREE.SphereGeometry(
+                    Math.random() * 0.5 + 0.2, 
+                    8, 6
+                );
+                const rock = new THREE.Mesh(
+                    rockGeometry,
+                    new THREE.MeshLambertMaterial({ 
+                        color: 0x696969,
+                        transparent: true,
+                        opacity: passthroughEnabled ? 0.3 : 0.8
+                    })
+                );
+                rock.position.set(
+                    (Math.random() - 0.5) * 60,
+                    0.1,
+                    (Math.random() - 0.5) * 60
+                );
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                scene.add(rock);
+            }
+        }
+        
+        function createEnhancedParticles() {
+            // Main floating particle system
+            const particleCount = 200;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                positions[i3] = (Math.random() - 0.5) * 100;
+                positions[i3 + 1] = Math.random() * 15;
+                positions[i3 + 2] = (Math.random() - 0.5) * 100;
+                
+                // Rainbow colors
+                const hue = Math.random();
+                const color = new THREE.Color().setHSL(hue, 0.7, 0.6);
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+                
+                sizes[i] = Math.random() * 0.3 + 0.1;
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particles.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+            
+            particleSystem = new THREE.Points(particles, particleMaterial);
+            scene.add(particleSystem);
+            
+            // Magic sparkle particles
+            createMagicParticles();
+        }
+        
+        function createMagicParticles() {
+            const magicCount = 50;
+            const magicGeometry = new THREE.BufferGeometry();
+            const magicPositions = new Float32Array(magicCount * 3);
+            const magicColors = new Float32Array(magicCount * 3);
+            
+            for (let i = 0; i < magicCount; i++) {
+                const i3 = i * 3;
+                magicPositions[i3] = (Math.random() - 0.5) * 40;
+                magicPositions[i3 + 1] = Math.random() * 10 + 2;
+                magicPositions[i3 + 2] = (Math.random() - 0.5) * 40;
+                
+                // Bright magical colors
+                magicColors[i3] = 1;
+                magicColors[i3 + 1] = Math.random() * 0.5 + 0.5;
+                magicColors[i3 + 2] = 1;
+            }
+            
+            magicGeometry.setAttribute('position', new THREE.BufferAttribute(magicPositions, 3));
+            magicGeometry.setAttribute('color', new THREE.BufferAttribute(magicColors, 3));
+            
+            const magicMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+            
+            magicParticles = new THREE.Points(magicGeometry, magicMaterial);
+            scene.add(magicParticles);
+        }
+        
+        async function checkVRSupport() {
+            const vrMessage = document.getElementById('vrMessage');
+            const vrStatus = document.getElementById('vrStatus');
+            
+            if (!navigator.xr) {
+                vrMessage.innerHTML = '❌ WebXR not supported.<br>Please use the <strong>Meta Quest Browser</strong> for VR experience.';
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 7000);
+                return;
+            }
+            
+            try {
+                const supported = await navigator.xr.isSessionSupported('immersive-vr');
+                if (supported) {
+                    vrMessage.innerHTML = '✅ <strong>VR Ready!</strong><br>Put on your Quest 2 and click "Enter VR Experience"';
+                    document.getElementById('vrButton').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                } else {
+                    vrMessage.innerHTML = 'VR device not detected.<br>Desktop mode available with full features.';
+                }
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 5000);
+            } catch (error) {
+                console.error('VR check error:', error);
+                vrMessage.innerHTML = 'VR check failed.<br>Desktop mode available with full features.';
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 5000);
+            }
+        }
+        
+        function setupEnhancedVRControllers() {
+            // Create enhanced camera rig for VR
+            cameraRig = new THREE.Group();
+            cameraRig.position.set(0, 0, 8);
+            scene.add(cameraRig);
+            
+            dolly = new THREE.Group();
+            cameraRig.add(dolly);
+            dolly.add(camera);
+            
+            // Enhanced controller setup with better interaction
+            controller1 = renderer.xr.getController(0);
+            controller1.addEventListener('selectstart', onSelectStart);
+            controller1.addEventListener('selectend', onSelectEnd);
+            controller1.addEventListener('squeeze', onSqueeze);
+            controller1.addEventListener('squeezeend', onSqueezeEnd);
+            controller1.addEventListener('connected', function(event) {
+                this.add(buildEnhancedController(event.data));
+            });
+            controller1.addEventListener('disconnected', function() {
+                if (this.children.length > 0) this.remove(this.children[0]);
+            });
+            dolly.add(controller1);
+            
+            controller2 = renderer.xr.getController(1);
+            controller2.addEventListener('selectstart', onSelectStart);
+            controller2.addEventListener('selectend', onSelectEnd);
+            controller2.addEventListener('squeeze', onSqueeze);
+            controller2.addEventListener('squeezeend', onSqueezeEnd);
+            controller2.addEventListener('connected', function(event) {
+                this.add(buildEnhancedController(event.data));
+            });
+            controller2.addEventListener('disconnected', function() {
+                if (this.children.length > 0) this.remove(this.children[0]);
+            });
+            dolly.add(controller2);
+            
+            // Enhanced controller grips
+            controllerGrip1 = renderer.xr.getControllerGrip(0);
+            controllerGrip1.add(buildEnhancedControllerModel());
+            dolly.add(controllerGrip1);
+            
+            controllerGrip2 = renderer.xr.getControllerGrip(1);
+            controllerGrip2.add(buildEnhancedControllerModel());
+            dolly.add(controllerGrip2);
+        }
+        
+        function buildEnhancedController(data) {
+            let geometry, material;
+            
+            switch (data.targetRayMode) {
+                case 'tracked-pointer':
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3));
+                    geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 1, 0.8, 0, 0.5, 0.5], 3));
+                    material = new THREE.LineBasicMaterial({ 
+                        vertexColors: true, 
+                        blending: THREE.AdditiveBlending,
+                        linewidth: 3
+                    });
+                    return new THREE.Line(geometry, material);
+                    
+                case 'gaze':
+                    geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
+                    material = new THREE.MeshBasicMaterial({ 
+                        color: 0x4ecdc4,
+                        opacity: 0.7, 
+                        transparent: true 
+                    });
+                    return new THREE.Mesh(geometry, material);
+            }
+        }
+        
+        function buildEnhancedControllerModel() {
+            const group = new THREE.Group();
+            
+            // Enhanced controller body
+            const geometry = new THREE.BoxGeometry(0.06, 0.14, 0.09);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x202020,
+                specular: 0x444444,
+                shininess: 100
+            });
+            const controller = new THREE.Mesh(geometry, material);
+            group.add(controller);
+            
+            // Glowing magical tip
+            const tipGeometry = new THREE.SphereGeometry(0.04);
+            const tipMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x4ecdc4,
+                emissive: 0x4ecdc4,
+                emissiveIntensity: 0.8
+            });
+            const tip = new THREE.Mesh(tipGeometry, tipMaterial);
+            tip.position.set(0, 0.07, 0);
+            group.add(tip);
+            
+            // Add sparkle effect around tip
+            const sparkleGeometry = new THREE.SphereGeometry(0.06);
+            const sparkleMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const sparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+            sparkle.position.set(0, 0.07, 0);
+            group.add(sparkle);
+            
+            return group;
+        }
+        
+        function onSelectStart(event) {
+            const controller = event.target;
+            
+            // Enhanced visual feedback
+            if (controller.children.length > 0) {
+                const line = controller.children[0];
+                if (line.material) {
+                    line.material.color.setHex(0xff4ecdc4);
+                }
+            }
+            
+            // Check for flower interaction with enhanced feedback
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            
+            const intersects = raycaster.intersectObjects(interactiveFlowers, true);
+            if (intersects.length > 0) {
+                const flower = intersects[0].object.parent;
+                animateEnhancedFlowerInteraction(flower);
+                createMagicBurst(intersects[0].point);
+            }
+        }
+        
+        function onSelectEnd(event) {
+            const controller = event.target;
+            
+            // Reset visual feedback
+            if (controller.children.length > 0) {
+                const line = controller.children[0];
+                if (line.material) {
+                    line.material.color.setHex(0x4ecdc4);
+                }
+            }
+        }
+        
+        function onSqueeze(event) {
+            // Enhanced grip interaction
+            const controller = event.target;
+            
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+            
+            const intersects = raycaster.intersectObjects(interactiveFlowers, true);
+            if (intersects.length > 0) {
+                selectedFlower = intersects[0].object.parent;
+                selectedFlower.userData.originalParent = selectedFlower.parent;
+                controller.attach(selectedFlower);
+                
+                // Visual feedback for grabbed flower
+                selectedFlower.scale.multiplyScalar(1.2);
+                
+                // Play grab sound
+                if (audioEnabled && magicSynth) {
+                    magicSynth.triggerAttackRelease('C6', '8n');
+                }
+            }
+        }
+        
+        function onSqueezeEnd(event) {
+            if (selectedFlower) {
+                // Return flower to scene
+                const originalParent = selectedFlower.userData.originalParent || scene;
+                originalParent.attach(selectedFlower);
+                selectedFlower.scale.divideScalar(1.2);
+                selectedFlower = null;
+            }
+        }
+        
+        function animateEnhancedFlowerInteraction(flower) {
+            // Create elaborate blooming animation
+            const duration = 2000;
+            const startScale = flower.scale.x;
+            const startTime = Date.now();
+            
+            function updateAnimation() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Complex easing with multiple phases
+                let easeProgress;
+                if (progress < 0.3) {
+                    // Rapid expansion
+                    easeProgress = progress / 0.3;
+                    easeProgress = 1 - Math.pow(1 - easeProgress, 3);
+                } else if (progress < 0.7) {
+                    // Gentle sway
+                    easeProgress = 1 + 0.3 * Math.sin((progress - 0.3) / 0.4 * Math.PI * 4);
+                } else {
+                    // Settle back
+                    easeProgress = 1 + 0.3 * Math.pow(1 - (progress - 0.7) / 0.3, 2);
+                }
+                
+                const scale = startScale * easeProgress;
+                flower.scale.set(scale, scale, scale);
+                
+                // Multi-axis rotation for organic movement
+                flower.rotation.y += 0.03 * Math.sin(progress * Math.PI * 2);
+                flower.rotation.z += 0.02 * Math.cos(progress * Math.PI * 3);
+                
+                // Color shifting effect
+                flower.children.forEach(child => {
+                    if (child.material && child.material.emissive) {
+                        const intensity = 0.3 * Math.sin(progress * Math.PI * 2);
+                        child.material.emissiveIntensity = Math.max(0, intensity);
+                    }
+                });
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateAnimation);
+                } else {
+                    flower.scale.set(startScale, startScale, startScale);
+                    flower.children.forEach(child => {
+                        if (child.material && child.material.emissive) {
+                            child.material.emissiveIntensity = 0.1;
+                        }
+                    });
+                }
+            }
+            
+            updateAnimation();
+            
+            // Play enhanced interaction sound
+            if (audioEnabled && harpSynth) {
+                const magicalNotes = ['C5', 'E5', 'G5', 'C6', 'E6'];
+                magicalNotes.forEach((note, index) => {
+                    setTimeout(() => {
+                        harpSynth.triggerAttackRelease(note, '8n');
+                    }, index * 100);
+                });
+            }
+        }
+        
+        function createMagicBurst(position) {
+            // Create magical particle burst at interaction point
+            const burstGeometry = new THREE.BufferGeometry();
+            const burstCount = 20;
+            const burstPositions = new Float32Array(burstCount * 3);
+            const burstVelocities = [];
+            
+            for (let i = 0; i < burstCount; i++) {
+                const i3 = i * 3;
+                burstPositions[i3] = position.x;
+                burstPositions[i3 + 1] = position.y;
+                burstPositions[i3 + 2] = position.z;
+                
+                // Random burst directions
+                burstVelocities.push(new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.1,
+                    Math.random() * 0.1,
+                    (Math.random() - 0.5) * 0.1
+                ));
+            }
+            
+            burstGeometry.setAttribute('position', new THREE.BufferAttribute(burstPositions, 3));
+            
+            const burstMaterial = new THREE.PointsMaterial({
+                size: 0.1,
+                color: 0xffd700,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const burst = new THREE.Points(burstGeometry, burstMaterial);
+            scene.add(burst);
+            
+            // Animate burst
+            let burstTime = 0;
+            function animateBurst() {
+                burstTime += 0.016;
+                const positions = burst.geometry.attributes.position.array;
+                
+                for (let i = 0; i < burstCount; i++) {
+                    const i3 = i * 3;
+                    const velocity = burstVelocities[i];
+                    
+                    positions[i3] += velocity.x;
+                    positions[i3 + 1] += velocity.y;
+                    positions[i3 + 2] += velocity.z;
+                    
+                    // Apply gravity
+                    velocity.y -= 0.002;
+                }
+                
+                burst.geometry.attributes.position.needsUpdate = true;
+                burst.material.opacity = Math.max(0, 1 - burstTime * 2);
+                
+                if (burstTime < 0.5) {
+                    requestAnimationFrame(animateBurst);
+                } else {
+                    scene.remove(burst);
+                }
+            }
+            animateBurst();
+        }
+        
+        function handleVRMovement() {
+            if (!renderer.xr.isPresenting) return;
+            
+            const session = renderer.xr.getSession();
+            if (!session || !session.inputSources) return;
+            
+            vrMovement.x = 0;
+            vrMovement.z = 0;
+            
+            for (let i = 0; i < session.inputSources.length; i++) {
+                const inputSource = session.inputSources[i];
+                const gamepad = inputSource.gamepad;
+                
+                if (!gamepad || gamepad.axes.length < 4) continue;
+                
+                // Enhanced movement with better responsiveness
+                if (inputSource.handedness === 'right') {
+                    const thumbstickX = gamepad.axes[2];
+                    const thumbstickY = gamepad.axes[3];
+                    
+                    if (Math.abs(thumbstickX) > 0.15) vrMovement.x = -thumbstickX * 0.08;
+                    if (Math.abs(thumbstickY) > 0.15) vrMovement.z = thumbstickY * 0.08;
+                }
+                
+                // Smooth rotation
+                if (inputSource.handedness === 'left') {
+                    const rotateX = gamepad.axes[2];
+                    
+                    if (Math.abs(rotateX) > 0.15) {
+                        cameraRig.rotation.y += rotateX * 0.03;
+                    }
+                }
+            }
+            
+            // Apply smooth movement with momentum
+            if (Math.abs(vrMovement.x) > 0.01 || Math.abs(vrMovement.z) > 0.01) {
+                const moveVector = new THREE.Vector3(vrMovement.x, 0, vrMovement.z);
+                moveVector.applyQuaternion(cameraRig.quaternion);
+                cameraRig.position.add(moveVector);
+            }
+        }
+        
+        function togglePassthrough() {
+            passthroughEnabled = !passthroughEnabled;
+            
+            if (passthroughEnabled) {
+                // Enhanced passthrough mode
+                scene.background = null;
+                renderer.setClearColor(0x000000, 0);
+                
+                // Make all ground elements more transparent
+                scene.traverse((object) => {
+                    if (object.material && (object.name === 'ground' || object.material.color.getHex() === 0x3a5f3a)) {
+                        object.material.opacity = 0.15;
+                    }
+                });
+                
+                // Reduce fog for better visibility
+                scene.fog.near = 30;
+                scene.fog.far = 150;
+                
+                // Make flowers more vibrant in passthrough
+                flowers.forEach(flower => {
+                    flower.children.forEach(child => {
+                        if (child.material && child.material.emissive) {
+                            child.material.emissiveIntensity = 0.3;
+                        }
+                    });
+                });
+                
+            } else {
+                // Restore normal scene
+                scene.background = new THREE.Color(0x87CEEB);
+                renderer.setClearColor(0x87CEEB, 1);
+                
+                scene.traverse((object) => {
+                    if (object.material && (object.name === 'ground' || object.material.color.getHex() === 0x3a5f3a)) {
+                        object.material.opacity = 0.9;
+                    }
+                });
+                
+                scene.fog.near = 5;
+                scene.fog.far = 30;
+                
+                flowers.forEach(flower => {
+                    flower.children.forEach(child => {
+                        if (child.material && child.material.emissive) {
+                            child.material.emissiveIntensity = 0.1;
+                        }
+                    });
+                });
+            }
+        }
+        
+        function setupEnhancedAudio() {
+            // Audio setup happens on user interaction
+        }
+        
+        async function toggleAudio() {
+            const audioButton = document.getElementById('audioButton');
+            
+            if (!audioEnabled) {
+                try {
+                    await Tone.start();
+                    audioEnabled = true;
+                    audioButton.textContent = '🔇 Disable Ambient Sounds';
+                    
+                    createEnhancedWindSound();
+                    createEnhancedBirdSounds();
+                    createEnhancedHarpSounds();
+                    createMagicalSounds();
+                    
+                } catch (error) {
+                    console.error('Failed to enable audio:', error);
+                }
+            } else {
+                Tone.Transport.stop();
+                audioEnabled = false;
+                audioButton.textContent = '🔊 Enable Ambient Sounds';
+            }
+        }
+        
+        function createEnhancedWindSound() {
+            const noise = new Tone.Noise("pink").start();
+            const filter = new Tone.Filter(400, "lowpass").toDestination();
+            const autoFilter = new Tone.AutoFilter(0.08).connect(filter);
+            const reverb = new Tone.Reverb(4).connect(autoFilter);
+            
+            noise.connect(reverb);
+            noise.volume.value = -35;
+            
+            windSound = { noise, filter, autoFilter, reverb };
+        }
+        
+        function createEnhancedBirdSounds() {
+            const birdTypes = [
+                { notes: ['C5', 'E5', 'G5'], pattern: "random", interval: 12 },
+                { notes: ['F5', 'A5', 'C6'], pattern: "up", interval: 15 },
+                { notes: ['D5', 'F#5', 'A5'], pattern: "down", interval: 18 },
+                { notes: ['G4', 'B4', 'D5'], pattern: "upDown", interval: 20 }
+            ];
+            
+            birdTypes.forEach((birdType, index) => {
+                const synth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: {
+                        attack: 0.03,
+                        decay: 0.08,
+                        sustain: 0.1,
+                        release: 0.3
+                    }
+                });
+                
+                const reverb = new Tone.Reverb(2).toDestination();
+                synth.connect(reverb);
+                synth.volume.value = -28;
+                
+                const pattern = new Tone.Pattern((time, note) => {
+                    synth.triggerAttackRelease(note, "16n", time);
+                }, birdType.notes, birdType.pattern);
+                
+                pattern.start(Math.random() * 5);
+                pattern.interval = birdType.interval + Math.random() * 10;
+                
+                birdSounds.push({ synth, pattern, reverb });
+            });
+            
+            Tone.Transport.start();
+        }
+        
+        function createEnhancedHarpSounds() {
+            harpSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: {
+                    attack: 0.1,
+                    decay: 1.2,
+                    sustain: 0.1,
+                    release: 2.0
+                }
+            });
+            
+            const reverb = new Tone.Reverb(4).toDestination();
+            const delay = new Tone.PingPongDelay("8n", 0.3).connect(reverb);
+            harpSynth.connect(delay);
+            harpSynth.volume.value = -22;
+        }
+        
+        function createMagicalSounds() {
+            magicSynth = new Tone.Synth({
+                oscillator: { type: "sine" },
+                envelope: {
+                    attack: 0.05,
+                    decay: 0.3,
+                    sustain: 0.2,
+                    release: 0.8
+                }
+            });
+            
+            const chorus = new Tone.Chorus(4, 2.5, 0.5).start();
+            const reverb = new Tone.Reverb(3).toDestination();
+            magicSynth.connect(chorus);
+            chorus.connect(reverb);
+            magicSynth.volume.value = -25;
+        }
+        
+        function createEnhancedFlower(x, y, z, scale = 1, type = 'default', walkableSize = false) {
+            const flowerGroup = new THREE.Group();
+            
+            // Enhanced flower types with more variety
+            const flowerTypes = {
+                'rose': { 
+                    petals: 24, 
+                    colors: [0xff1744, 0xff4569, 0xff6b8a, 0xffb3ba], 
+                    center: 0xffeb3b,
+                    petalShape: 'rose'
+                },
+                'daisy': { 
+                    petals: 16, 
+                    colors: [0xffffff, 0xfffacd, 0xfffff0, 0xfff8dc], 
+                    center: 0xffd700,
+                    petalShape: 'daisy'
+                },
+                'tulip': { 
+                    petals: 8, 
+                    colors: [0xff69b4, 0xff1493, 0xc71585, 0xda70d6], 
+                    center: 0x8b008b,
+                    petalShape: 'tulip'
+                },
+                'sunflower': { 
+                    petals: 20, 
+                    colors: [0xffd700, 0xffa500, 0xff8c00, 0xffb347], 
+                    center: 0x8b4513,
+                    petalShape: 'sunflower'
+                },
+                'lotus': {
+                    petals: 12,
+                    colors: [0xffc0cb, 0xffb6c1, 0xffa0b4, 0xff91a4],
+                    center: 0xffffff,
+                    petalShape: 'lotus'
+                },
+                'default': { 
+                    petals: 10, 
+                    colors: [0xff69b4, 0xff1493, 0xffc0cb, 0xffb6c1], 
+                    center: 0xffff00,
+                    petalShape: 'default'
+                }
+            };
+            
+            const flowerType = flowerTypes[type] || flowerTypes.default;
+            const finalScale = walkableSize ? scale * 2.5 : scale;
+            
+            // Create enhanced petals with different shapes
+            for (let i = 0; i < flowerType.petals; i++) {
+                const angle = (i / flowerType.petals) * Math.PI * 2;
+                const petal = createPetal(flowerType.petalShape, finalScale, flowerType.colors);
+                
+                const petalRadius = 0.6 * finalScale;
+                petal.position.set(
+                    Math.cos(angle) * petalRadius,
+                    Math.sin(i * 0.1) * 0.1 * finalScale,
+                    Math.sin(angle) * petalRadius
+                );
+                petal.rotation.z = angle;
+                petal.rotation.x = 0.2 + Math.sin(i) * 0.1;
+                petal.castShadow = true;
+                petal.receiveShadow = true;
+                flowerGroup.add(petal);
+            }
+            
+            // Enhanced flower center
+            const centerGeometry = new THREE.SphereGeometry(0.35 * finalScale, 20, 16);
+            const center = new THREE.Mesh(
+                centerGeometry,
+                new THREE.MeshPhongMaterial({ 
+                    color: flowerType.center,
+                    emissive: flowerType.center,
+                    emissiveIntensity: 0.2,
+                    shininess: 50
+                })
+            );
+            center.castShadow = true;
+            flowerGroup.add(center);
+            
+            // Enhanced curved stem
+            const stemCurve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0.15 * finalScale, -0.8 * finalScale, 0),
+                new THREE.Vector3(-0.1 * finalScale, -1.6 * finalScale, 0),
+                new THREE.Vector3(0, -2.2 * finalScale, 0)
+            ]);
+            
+            const stemGeometry = new THREE.TubeGeometry(stemCurve, 32, 0.08 * finalScale, 12, false);
+            const stem = new THREE.Mesh(
+                stemGeometry,
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x228b22,
+                    emissive: 0x113311,
+                    emissiveIntensity: 0.1
+                })
+            );
+            stem.castShadow = true;
+            flowerGroup.add(stem);
+            
+            // Multiple realistic leaves
+            for (let i = 0; i < 3; i++) {
+                const leaf = createEnhancedLeaf(finalScale);
+                leaf.position.set(
+                    (i === 0 ? 0.4 : i === 1 ? -0.4 : 0) * finalScale,
+                    -0.8 * finalScale - i * 0.3 * finalScale,
+                    (i === 2 ? 0.3 : 0) * finalScale
+                );
+                leaf.rotation.z = (i === 0 ? -0.6 : i === 1 ? 0.6 : 0);
+                leaf.rotation.y = i * 0.5;
+                flowerGroup.add(leaf);
+            }
+            
+            flowerGroup.position.set(x, y, z);
+            flowerGroup.userData.originalY = y;
+            flowerGroup.userData.swayOffset = Math.random() * Math.PI * 2;
+            flowerGroup.userData.flowerType = type;
+            flowerGroup.userData.walkableSize = walkableSize;
+            
+            // Make flower interactive
+            interactiveFlowers.push(flowerGroup);
+            
+            return flowerGroup;
+        }
+        
+        function createPetal(shape, scale, colors) {
+            let geometry;
+            
+            switch (shape) {
+                case 'rose':
+                    geometry = new THREE.SphereGeometry(0.35 * scale, 12, 8);
+                    geometry.scale(1.2, 0.4, 0.8);
+                    break;
+                case 'daisy':
+                    geometry = new THREE.CylinderGeometry(0.05 * scale, 0.3 * scale, 0.6 * scale, 8);
+                    geometry.rotateX(Math.PI / 2);
+                    break;
+                case 'tulip':
+                    geometry = new THREE.SphereGeometry(0.4 * scale, 10, 8);
+                    geometry.scale(0.8, 0.6, 1.2);
+                    break;
+                case 'sunflower':
+                    geometry = new THREE.ConeGeometry(0.3 * scale, 0.8 * scale, 8);
+                    geometry.rotateX(Math.PI / 2);
+                    break;
+                case 'lotus':
+                    geometry = new THREE.SphereGeometry(0.4 * scale, 12, 8);
+                    geometry.scale(1.4, 0.3, 0.9);
+                    break;
+                default:
+                    geometry = new THREE.SphereGeometry(0.3 * scale, 10, 8);
+                    geometry.scale(1, 0.4, 0.7);
+            }
+            
+            const petal = new THREE.Mesh(
+                geometry,
+                new THREE.MeshPhongMaterial({ 
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    emissive: 0x222222,
+                    emissiveIntensity: 0.1,
+                    shininess: 40,
+                    transparent: true,
+                    opacity: 0.9
+                })
+            );
+            
+            return petal;
+        }
+        
+        function createEnhancedLeaf(scale) {
+            // Create more realistic leaf shape
+            const leafShape = new THREE.Shape();
+            leafShape.moveTo(0, 0);
+            leafShape.bezierCurveTo(0.4, 0.1, 0.5, 0.6, 0, 0.8);
+            leafShape.bezierCurveTo(-0.5, 0.6, -0.4, 0.1, 0, 0);
+            
+            const extrudeSettings = {
+                depth: 0.03 * scale,
+                bevelEnabled: true,
+                bevelSegments: 3,
+                steps: 2,
+                bevelSize: 0.02 * scale,
+                bevelThickness: 0.02 * scale
+            };
+            
+            const leafGeometry = new THREE.ExtrudeGeometry(leafShape, extrudeSettings);
+            const leaf = new THREE.Mesh(
+                leafGeometry,
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x32cd32,
+                    emissive: 0x112211,
+                    emissiveIntensity: 0.1,
+                    side: THREE.DoubleSide
+                })
+            );
+            
+            leaf.scale.set(scale, scale, scale);
+            leaf.castShadow = true;
+            return leaf;
+        }
+        
+        // New function: Create walkable flower bouquet
+        function createWalkableBouquet() {
+            clearExistingFlowers();
+            
+            const name = document.getElementById('nameInput').value.toUpperCase() || 'SARAH';
+            const letterSpacing = 8; // Increased spacing for walking
+            const startX = -(name.length * letterSpacing) / 2;
+            
+            // Create large 3D text with flowers you can walk between
+            for (let i = 0; i < name.length; i++) {
+                const letter = name[i];
+                if (letter === ' ') continue;
+                
+                const letterFlowers = create3DLetterFlowers(
+                    letter, 
+                    startX + i * letterSpacing, 
+                    3, // Higher position
+                    0, 
+                    true // Walkable size
+                );
+                letterFlowers.forEach(flower => {
+                    flowers.push(flower);
+                    scene.add(flower);
+                });
+            }
+            
+            // Add path lighting
+            createPathLights(startX, name.length * letterSpacing);
+            
+            // Enhanced floating petals
+            createEnhancedFloatingPetals();
+        }
+        
+        function createPathLights(startX, totalWidth) {
+            const lightCount = 8;
+            for (let i = 0; i < lightCount; i++) {
+                const x = startX + (i / (lightCount - 1)) * totalWidth;
+                
+                const light = new THREE.PointLight(0xffffff, 0.8, 10);
+                light.position.set(x, 2, -6);
+                light.castShadow = true;
+                scene.add(light);
+                
+                // Add visible light orb
+                const orbGeometry = new THREE.SphereGeometry(0.1);
+                const orbMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    emissive: 0xffffff,
+                    emissiveIntensity: 0.8
+                });
+                const orb = new THREE.Mesh(orbGeometry, orbMaterial);
+                orb.position.copy(light.position);
+                scene.add(orb);
+            }
+        }
+        
+        // New function: Create rainbow flowers
+        function createRainbowFlowers() {
+            clearExistingFlowers();
+            
+            const colors = [
+                0xff0000, 0xff8000, 0xffff00, 0x80ff00,
+                0x00ff00, 0x00ff80, 0x00ffff, 0x0080ff,
+                0x0000ff, 0x8000ff, 0xff00ff, 0xff0080
+            ];
+            
+            const radius = 8;
+            const flowerCount = colors.length * 3;
+            
+            for (let i = 0; i < flowerCount; i++) {
+                const angle = (i / flowerCount) * Math.PI * 2;
+                const colorIndex = Math.floor(i / 3) % colors.length;
+                const distance = radius + Math.sin(i * 0.5) * 2;
+                
+                const flower = createRainbowFlower(
+                    Math.cos(angle) * distance,
+                    Math.random() * 2 + 1,
+                    Math.sin(angle) * distance,
+                    1 + Math.random() * 0.5,
+                    colors[colorIndex]
+                );
+                
+                flowers.push(flower);
+                scene.add(flower);
+            }
+            
+            createEnhancedFloatingPetals();
+        }
+        
+        function createRainbowFlower(x, y, z, scale, color) {
+            const flowerGroup = new THREE.Group();
+            
+            // Rainbow petals
+            const petalCount = 12;
+            for (let i = 0; i < petalCount; i++) {
+                const angle = (i / petalCount) * Math.PI * 2;
+                const petal = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.3 * scale, 8, 6).scale(1, 0.3, 0.6),
+                    new THREE.MeshPhongMaterial({ 
+                        color: color,
+                        emissive: color,
+                        emissiveIntensity: 0.3,
+                        shininess: 60
+                    })
+                );
+                
+                petal.position.set(
+                    Math.cos(angle) * 0.5 * scale,
+                    0,
+                    Math.sin(angle) * 0.5 * scale
+                );
+                petal.rotation.z = angle;
+                petal.castShadow = true;
+                flowerGroup.add(petal);
+            }
+            
+            // Glowing center
+            const center = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2 * scale),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    emissive: 0xffffff,
+                    emissiveIntensity: 0.8
+                })
+            );
+            flowerGroup.add(center);
+            
+            // Simple stem
+            const stem = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05 * scale, 0.05 * scale, 1.5 * scale),
+                new THREE.MeshLambertMaterial({ color: 0x228b22 })
+            );
+            stem.position.y = -0.75 * scale;
+            stem.castShadow = true;
+            flowerGroup.add(stem);
+            
+            flowerGroup.position.set(x, y, z);
+            flowerGroup.userData.originalY = y;
+            flowerGroup.userData.swayOffset = Math.random() * Math.PI * 2;
+            flowerGroup.userData.rainbowColor = color;
+            
+            interactiveFlowers.push(flowerGroup);
+            return flowerGroup;
+        }
+        
+        // New function: Create floating garden
+        function createFloatingGarden() {
+            clearExistingFlowers();
+            
+            const flowerTypes = ['rose', 'daisy', 'tulip', 'sunflower', 'lotus'];
+            const levels = 5;
+            const flowersPerLevel = 8;
+            
+            for (let level = 0; level < levels; level++) {
+                const height = 2 + level * 2;
+                const radius = 3 + level * 1.5;
+                
+                for (let i = 0; i < flowersPerLevel; i++) {
+                    const angle = (i / flowersPerLevel) * Math.PI * 2 + level * 0.5;
+                    const flowerType = flowerTypes[Math.floor(Math.random() * flowerTypes.length)];
+                    
+                    const flower = createEnhancedFlower(
+                        Math.cos(angle) * radius,
+                        height,
+                        Math.sin(angle) * radius,
+                        0.8 + Math.random() * 0.4,
+                        flowerType
+                    );
+                    
+                    // Add floating animation
+                    flower.userData.floatingOffset = Math.random() * Math.PI * 2;
+                    flower.userData.floatingSpeed = 0.01 + Math.random() * 0.01;
+                    flower.userData.floatingAmplitude = 0.3 + Math.random() * 0.2;
+                    
+                    flowers.push(flower);
+                    scene.add(flower);
+                }
+            }
+            
+            // Add central floating platform
+            const platformGeometry = new THREE.CylinderGeometry(2, 2.5, 0.3, 16);
+            const platform = new THREE.Mesh(
+                platformGeometry,
+                new THREE.MeshPhongMaterial({
+                    color: 0xffffff,
+                    emissive: 0x4ecdc4,
+                    emissiveIntensity: 0.2,
+                    transparent: true,
+                    opacity: 0.8
+                })
+            );
+            platform.position.set(0, 4, 0);
+            platform.castShadow = true;
+            scene.add(platform);
+            flowers.push(platform);
+            
+            createEnhancedFloatingPetals();
+        }
+        
+        function clearExistingFlowers() {
+            flowers.forEach(flower => {
+                scene.remove(flower);
+                const index = interactiveFlowers.indexOf(flower);
+                if (index > -1) interactiveFlowers.splice(index, 1);
+            });
+            flowers = [];
+        }
+        
+        function createFlowerBouquet() {
+            clearExistingFlowers();
+            
+            const name = document.getElementById('nameInput').value.toUpperCase() || 'SARAH';
+            const letterSpacing = 4;
+            const startX = -(name.length * letterSpacing) / 2;
+            
+            // Create 3D text with enhanced flowers
+            for (let i = 0; i < name.length; i++) {
+                const letter = name[i];
+                if (letter === ' ') continue;
+                
+                const letterFlowers = create3DLetterFlowers(letter, startX + i * letterSpacing, 2, 0);
+                letterFlowers.forEach(flower => {
+                    flowers.push(flower);
+                    scene.add(flower);
+                });
+            }
+            
+            createEnhancedFloatingPetals();
+        }
+        
+        function create3DLetterFlowers(letter, offsetX, offsetY, offsetZ, walkableSize = false) {
+            const flowerPositions = getLetterPositions(letter);
+            const letterFlowers = [];
+            const flowerTypes = ['rose', 'daisy', 'tulip', 'sunflower', 'lotus'];
+            
+            // Create flowers in multiple layers for 3D effect
+            flowerPositions.forEach((pos, index) => {
+                // Front layer
+                const flowerType = flowerTypes[Math.floor(Math.random() * flowerTypes.length)];
+                const flower = createEnhancedFlower(
+                    pos.x + offsetX,
+                    pos.y + offsetY,
+                    pos.z + offsetZ,
+                    walkableSize ? 2.0 : 1.5,
+                    flowerType,
+                    walkableSize
+                );
+                letterFlowers.push(flower);
+                
+                // Add depth with additional flowers
+                if (index % 2 === 0) {
+                    const backFlower = createEnhancedFlower(
+                        pos.x + offsetX + (Math.random() - 0.5) * 0.5,
+                        pos.y + offsetY,
+                        pos.z + offsetZ - (walkableSize ? 1.0 : 0.5),
+                        walkableSize ? 1.5 : 1.2,
+                        flowerType,
+                        walkableSize
+                    );
+                    letterFlowers.push(backFlower);
+                }
+            });
+            
+            return letterFlowers;
+        }
+        
+        function createEnhancedFloatingPetals() {
+            const petalCount = 50;
+            
+            for (let i = 0; i < petalCount; i++) {
+                const petalGeometry = new THREE.SphereGeometry(0.15, 8, 6);
+                petalGeometry.scale(1, 0.3, 0.6);
+                
+                const colors = [0xff69b4, 0xff1493, 0xffc0cb, 0xffd700, 0x4ecdc4];
+                const petal = new THREE.Mesh(
+                    petalGeometry,
+                    new THREE.MeshPhongMaterial({
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        emissive: colors[Math.floor(Math.random() * colors.length)],
+                        emissiveIntensity: 0.2,
+                        transparent: true,
+                        opacity: 0.8
+                    })
+                );
+                
+                petal.position.set(
+                    (Math.random() - 0.5) * 30,
+                    Math.random() * 8 + 5,
+                    (Math.random() - 0.5) * 30
+                );
+                
+                petal.userData.floatingPetal = true;
+                petal.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.03,
+                    -Math.random() * 0.015 - 0.01,
+                    (Math.random() - 0.5) * 0.03
+                );
+                petal.userData.rotationSpeed = Math.random() * 0.15;
+                petal.userData.swayOffset = Math.random() * Math.PI * 2;
+                
+                scene.add(petal);
+                flowers.push(petal);
+            }
+        }
+        
+        function createFlowerHeart() {
+            clearExistingFlowers();
+            
+            const scale = 5;
+            const flowerTypes = ['rose', 'daisy', 'tulip', 'sunflower', 'lotus'];
+            
+            // Create a large 3D heart shape with enhanced flowers
+            for (let t = 0; t < Math.PI * 2; t += 0.08) {
+                // Heart equation
+                const x = scale * (16 * Math.pow(Math.sin(t), 3));
+                const z = scale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                
+                // Create flowers at different heights for 3D effect
+                for (let y = 0; y <= 4; y += 0.4) {
+                    const flowerType = flowerTypes[Math.floor(Math.random() * flowerTypes.length)];
+                    const flower = createEnhancedFlower(
+                        x/12,
+                        y + 1,
+                        z/12,
+                        0.8 + Math.random() * 0.6,
+                        flowerType
+                    );
+                    flowers.push(flower);
+                    scene.add(flower);
+                    
+                    // Add depth variation
+                    if (Math.random() < 0.4) {
+                        const depthFlower = createEnhancedFlower(
+                            x/12 + (Math.random() - 0.5) * 1.5,
+                            y + 1,
+                            z/12 + (Math.random() - 0.5) * 1.5,
+                            0.6 + Math.random() * 0.4,
+                            flowerType
+                        );
+                        flowers.push(depthFlower);
+                        scene.add(depthFlower);
+                    }
+                }
+            }
+            
+            // Fill the center with smaller flowers
+            for (let i = 0; i < 80; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 3;
+                const height = Math.random() * 4;
+                
+                const flower = createEnhancedFlower(
+                    Math.cos(angle) * radius,
+                    height + 1,
+                    Math.sin(angle) * radius,
+                    0.5 + Math.random() * 0.4,
+                    flowerTypes[Math.floor(Math.random() * flowerTypes.length)]
+                );
+                flowers.push(flower);
+                scene.add(flower);
+            }
+            
+            createEnhancedFloatingPetals();
+        }
+        
+        function createSpiralGarden() {
+            clearExistingFlowers();
+            
+            const spirals = 4;
+            const flowersPerSpiral = 40;
+            const flowerTypes = ['rose', 'daisy', 'tulip', 'sunflower', 'lotus'];
+            
+            for (let s = 0; s < spirals; s++) {
+                const spiralOffset = (s / spirals) * Math.PI * 2;
+                
+                for (let i = 0; i < flowersPerSpiral; i++) {
+                    const t = i / flowersPerSpiral * Math.PI * 6;
+                    const radius = 0.3 + t * 0.4;
+                    
+                    const x = Math.cos(t + spiralOffset) * radius;
+                    const z = Math.sin(t + spiralOffset) * radius;
+                    const y = i * 0.1;
+                    
+                    const flowerType = flowerTypes[Math.floor(Math.random() * flowerTypes.length)];
+                    const flower = createEnhancedFlower(
+                        x,
+                        y + 0.5,
+                        z,
+                        0.7 + (i / flowersPerSpiral) * 0.8,
+                        flowerType
+                    );
+                    
+                    flowers.push(flower);
+                    scene.add(flower);
+                }
+            }
+            
+            // Add central tower of flowers
+            for (let i = 0; i < 30; i++) {
+                const height = i * 0.3;
+                const radius = Math.max(0.5, 2 - height * 0.2);
+                const angle = i * 0.5;
+                
+                const flower = createEnhancedFlower(
+                    Math.cos(angle) * radius,
+                    height + 1,
+                    Math.sin(angle) * radius,
+                    1 + Math.random() * 0.5,
+                    flowerTypes[Math.floor(Math.random() * flowerTypes.length)]
+                );
+                flowers.push(flower);
+                scene.add(flower);
+            }
+            
+            createEnhancedFloatingPetals();
+        }
+        
+        function getLetterPositions(letter) {
+            const patterns = {
+                'A': [{x:-0.6,y:0,z:0}, {x:0.6,y:0,z:0}, {x:-0.4,y:0.5,z:0}, {x:0.4,y:0.5,z:0}, {x:-0.2,y:1,z:0}, {x:0.2,y:1,z:0}, {x:0,y:1.5,z:0}, {x:-0.3,y:0.7,z:0}, {x:0.3,y:0.7,z:0}],
+                'B': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0,z:0}, {x:-0.2,y:0.75,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:0.1,z:0}, {x:0.2,y:1.4,z:0}, {x:0.4,y:0.4,z:0}, {x:0.4,y:0.75,z:0}, {x:0.4,y:1.1,z:0}],
+                'C': [{x:-0.4,y:0.3,z:0}, {x:-0.4,y:0.6,z:0}, {x:-0.4,y:0.9,z:0}, {x:-0.4,y:1.2,z:0}, {x:-0.1,y:0,z:0}, {x:-0.1,y:1.5,z:0}, {x:0.2,y:0.1,z:0}, {x:0.2,y:1.4,z:0}, {x:0.4,y:0.3,z:0}, {x:0.4,y:1.2,z:0}],
+                'D': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:0.2,z:0}, {x:0.2,y:1.3,z:0}, {x:0.5,y:0.5,z:0}, {x:0.5,y:0.75,z:0}, {x:0.5,y:1,z:0}],
+                'E': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0,z:0}, {x:-0.2,y:0.75,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:0,z:0}, {x:0.2,y:0.75,z:0}, {x:0.2,y:1.5,z:0}, {x:0.5,y:0,z:0}, {x:0.5,y:1.5,z:0}],
+                'F': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0.75,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:0.75,z:0}, {x:0.2,y:1.5,z:0}, {x:0.5,y:1.5,z:0}],
+                'G': [{x:-0.4,y:0.3,z:0}, {x:-0.4,y:0.6,z:0}, {x:-0.4,y:0.9,z:0}, {x:-0.4,y:1.2,z:0}, {x:-0.1,y:0,z:0}, {x:-0.1,y:1.5,z:0}, {x:0.2,y:0.1,z:0}, {x:0.2,y:1.4,z:0}, {x:0.5,y:0.3,z:0}, {x:0.5,y:0.75,z:0}, {x:0.2,y:0.75,z:0}, {x:0.5,y:1.2,z:0}],
+                'H': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:0.6,y:0,z:0}, {x:0.6,y:0.5,z:0}, {x:0.6,y:1,z:0}, {x:0.6,y:1.5,z:0}, {x:-0.2,y:0.75,z:0}, {x:0,y:0.75,z:0}, {x:0.2,y:0.75,z:0}],
+                'I': [{x:0,y:0,z:0}, {x:0,y:0.5,z:0}, {x:0,y:1,z:0}, {x:0,y:1.5,z:0}, {x:-0.4,y:0,z:0}, {x:0.4,y:0,z:0}, {x:-0.4,y:1.5,z:0}, {x:0.4,y:1.5,z:0}],
+                'J': [{x:0.6,y:0.5,z:0}, {x:0.6,y:1,z:0}, {x:0.6,y:1.5,z:0}, {x:0.2,y:0,z:0}, {x:-0.2,y:0.1,z:0}, {x:-0.5,y:0.3,z:0}, {x:0.2,y:1.5,z:0}, {x:-0.2,y:1.5,z:0}],
+                'K': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.1,y:0.75,z:0}, {x:0.2,y:0.4,z:0}, {x:0.2,y:1.1,z:0}, {x:0.5,y:0,z:0}, {x:0.5,y:1.5,z:0}],
+                'L': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0,z:0}, {x:0.2,y:0,z:0}, {x:0.5,y:0,z:0}],
+                'M': [{x:-0.7,y:0,z:0}, {x:-0.7,y:0.5,z:0}, {x:-0.7,y:1,z:0}, {x:-0.7,y:1.5,z:0}, {x:0.7,y:0,z:0}, {x:0.7,y:0.5,z:0}, {x:0.7,y:1,z:0}, {x:0.7,y:1.5,z:0}, {x:0,y:0.9,z:0}, {x:-0.35,y:1.2,z:0}, {x:0.35,y:1.2,z:0}],
+                'N': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:0.6,y:0,z:0}, {x:0.6,y:0.5,z:0}, {x:0.6,y:1,z:0}, {x:0.6,y:1.5,z:0}, {x:-0.3,y:0.5,z:0}, {x:0,y:0.75,z:0}, {x:0.3,y:1,z:0}],
+                'O': [{x:-0.4,y:0.3,z:0}, {x:-0.4,y:0.75,z:0}, {x:-0.4,y:1.2,z:0}, {x:0.4,y:0.3,z:0}, {x:0.4,y:0.75,z:0}, {x:0.4,y:1.2,z:0}, {x:-0.2,y:0,z:0}, {x:0.2,y:0,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.5,z:0}, {x:0,y:0.1,z:0}, {x:0,y:1.4,z:0}],
+                'P': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0.75,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.4,z:0}, {x:0.2,y:0.9,z:0}, {x:0.5,y:1.1,z:0}],
+                'Q': [{x:-0.4,y:0.3,z:0}, {x:-0.4,y:0.75,z:0}, {x:-0.4,y:1.2,z:0}, {x:0.4,y:0.3,z:0}, {x:0.4,y:0.75,z:0}, {x:0.4,y:1.2,z:0}, {x:-0.2,y:0,z:0}, {x:0.2,y:0,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.5,z:0}, {x:0.6,y:0.1,z:0}],
+                'R': [{x:-0.6,y:0,z:0}, {x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:-0.2,y:0.75,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.4,z:0}, {x:0.2,y:0.9,z:0}, {x:0.5,y:1.1,z:0}, {x:0.1,y:0.6,z:0}, {x:0.4,y:0.3,z:0}, {x:0.6,y:0,z:0}],
+                'S': [{x:-0.4,y:1.2,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.5,z:0}, {x:0.4,y:1.2,z:0}, {x:-0.2,y:0.75,z:0}, {x:0.2,y:0.75,z:0}, {x:-0.4,y:0.3,z:0}, {x:-0.2,y:0,z:0}, {x:0.2,y:0,z:0}, {x:0.4,y:0.3,z:0}],
+                'T': [{x:-0.6,y:1.5,z:0}, {x:-0.3,y:1.5,z:0}, {x:0,y:1.5,z:0}, {x:0.3,y:1.5,z:0}, {x:0.6,y:1.5,z:0}, {x:0,y:0,z:0}, {x:0,y:0.5,z:0}, {x:0,y:1,z:0}, {x:0,y:1.3,z:0}],
+                'U': [{x:-0.6,y:0.5,z:0}, {x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:0.6,y:0.5,z:0}, {x:0.6,y:1,z:0}, {x:0.6,y:1.5,z:0}, {x:-0.4,y:0.2,z:0}, {x:0,y:0,z:0}, {x:0.4,y:0.2,z:0}, {x:-0.2,y:0.1,z:0}, {x:0.2,y:0.1,z:0}],
+                'V': [{x:-0.6,y:1,z:0}, {x:-0.6,y:1.5,z:0}, {x:0.6,y:1,z:0}, {x:0.6,y:1.5,z:0}, {x:-0.4,y:0.6,z:0}, {x:0.4,y:0.6,z:0}, {x:-0.2,y:0.3,z:0}, {x:0.2,y:0.3,z:0}, {x:0,y:0,z:0}],
+                'W': [{x:-0.7,y:0.5,z:0}, {x:-0.7,y:1,z:0}, {x:-0.7,y:1.5,z:0}, {x:0.7,y:0.5,z:0}, {x:0.7,y:1,z:0}, {x:0.7,y:1.5,z:0}, {x:0,y:0.4,z:0}, {x:-0.35,y:0.2,z:0}, {x:0.35,y:0.2,z:0}, {x:-0.5,y:0,z:0}, {x:0.5,y:0,z:0}, {x:0,y:0.1,z:0}],
+                'X': [{x:-0.6,y:0,z:0}, {x:-0.3,y:0.4,z:0}, {x:0,y:0.75,z:0}, {x:0.3,y:0.4,z:0}, {x:0.6,y:0,z:0}, {x:0.6,y:1.5,z:0}, {x:0.3,y:1.1,z:0}, {x:-0.3,y:1.1,z:0}, {x:-0.6,y:1.5,z:0}],
+                'Y': [{x:-0.6,y:1.2,z:0}, {x:-0.3,y:0.9,z:0}, {x:0,y:0.75,z:0}, {x:0.3,y:0.9,z:0}, {x:0.6,y:1.2,z:0}, {x:0,y:0,z:0}, {x:0,y:0.3,z:0}, {x:0,y:0.5,z:0}, {x:-0.6,y:1.5,z:0}, {x:0.6,y:1.5,z:0}],
+                'Z': [{x:-0.6,y:1.5,z:0}, {x:-0.2,y:1.5,z:0}, {x:0.2,y:1.5,z:0}, {x:0.6,y:1.5,z:0}, {x:0.3,y:1.2,z:0}, {x:0,y:0.75,z:0}, {x:-0.3,y:0.3,z:0}, {x:-0.6,y:0,z:0}, {x:-0.2,y:0,z:0}, {x:0.2,y:0,z:0}, {x:0.6,y:0,z:0}]
+            };
+            
+            return patterns[letter] || [{x:0,y:0.75,z:0}];
+        }
+        
+        function setupControls() {
+            const onKeyDown = function(event) {
+                switch(event.code) {
+                    case 'ArrowUp':
+                    case 'KeyW':
+                        moveForward = true;
+                        break;
+                    case 'ArrowLeft':
+                    case 'KeyA':
+                        moveLeft = true;
+                        break;
+                    case 'ArrowDown':
+                    case 'KeyS':
+                        moveBackward = true;
+                        break;
+                    case 'ArrowRight':
+                    case 'KeyD':
+                        moveRight = true;
+                        break;
+                }
+            };
+            
+            const onKeyUp = function(event) {
+                switch(event.code) {
+                    case 'ArrowUp':
+                    case 'KeyW':
+                        moveForward = false;
+                        break;
+                    case 'ArrowLeft':
+                    case 'KeyA':
+                        moveLeft = false;
+                        break;
+                    case 'ArrowDown':
+                    case 'KeyS':
+                        moveBackward = false;
+                        break;
+                    case 'ArrowRight':
+                    case 'KeyD':
+                        moveRight = false;
+                        break;
+                }
+            };
+            
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            
+            // Enhanced mouse controls
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (event) => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    mouseX += event.movementX * 0.002;
+                    mouseY += event.movementY * 0.002;
+                    mouseY = Math.max(-Math.PI/2, Math.min(Math.PI/2, mouseY));
+                    
+                    camera.rotation.order = 'YXZ';
+                    camera.rotation.y = -mouseX;
+                    camera.rotation.x = -mouseY;
+                }
+            });
+            
+            renderer.domElement.addEventListener('click', () => {
+                renderer.domElement.requestPointerLock();
+            });
+        }
+        
+        function animate() {
+            // Handle VR movement
+            handleVRMovement();
+            
+            // Handle desktop movement with smoother controls
+            if (!renderer.xr.isPresenting) {
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.z = Number(moveBackward) - Number(moveForward);
+                direction.normalize();
+                
+                if (moveForward || moveBackward) velocity.z -= direction.z * 0.12;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 0.12;
+                
+                velocity.multiplyScalar(0.85);
+                
+                const forward = new THREE.Vector3();
+                camera.getWorldDirection(forward);
+                const right = new THREE.Vector3();
+                right.crossVectors(forward, camera.up).normalize();
+                
+                camera.position.addScaledVector(right, -velocity.x);
+                camera.position.addScaledVector(forward, -velocity.z);
+            }
+            
+            const time = Date.now() * 0.001;
+            
+            // Enhanced flower animations
+            flowers.forEach((flower, index) => {
+                if (flower.userData.originalY !== undefined) {
+                    // Enhanced swaying motion
+                    const swayIntensity = flower.userData.walkableSize ? 0.15 : 0.08;
+                    flower.position.y = flower.userData.originalY + Math.sin(time + flower.userData.swayOffset) * swayIntensity;
+                    flower.rotation.z = Math.sin(time + flower.userData.swayOffset + 1) * 0.03;
+                    flower.rotation.y += 0.001;
+                    
+                    // Add subtle bobbing for walkable flowers
+                    if (flower.userData.walkableSize) {
+                        flower.position.y += Math.sin(time * 2 + index) * 0.05;
+                    }
+                }
+                
+                // Enhanced floating animation
+                if (flower.userData.floatingOffset !== undefined) {
+                    const floatTime = time * flower.userData.floatingSpeed + flower.userData.floatingOffset;
+                    flower.position.y += Math.sin(floatTime) * flower.userData.floatingAmplitude * 0.016;
+                    flower.rotation.y += 0.005;
+                    flower.rotation.z = Math.sin(floatTime * 0.7) * 0.1;
+                }
+                
+                // Enhanced floating petals
+                if (flower.userData.floatingPetal) {
+                    flower.position.add(flower.userData.velocity);
+                    flower.rotation.x += flower.userData.rotationSpeed;
+                    flower.rotation.y += flower.userData.rotationSpeed * 0.7;
+                    flower.rotation.z += flower.userData.rotationSpeed * 0.3;
+                    
+                    // Add swaying motion
+                    flower.position.x += Math.sin(time + flower.userData.swayOffset) * 0.005;
+                    flower.position.z += Math.cos(time + flower.userData.swayOffset) * 0.005;
+                    
+                    // Reset petal when it falls too low
+                    if (flower.position.y < -2) {
+                        flower.position.y = 12;
+                        flower.position.x = (Math.random() - 0.5) * 40;
+                        flower.position.z = (Math.random() - 0.5) * 40;
+                    }
+                }
+                
+                // Rainbow flower color shifting
+                if (flower.userData.rainbowColor) {
+                    const hue = (time * 0.5 + index * 0.1) % 1;
+                    const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+                    flower.children.forEach(child => {
+                        if (child.material && child.material.color) {
+                            child.material.color.copy(color);
+                            if (child.material.emissive) {
+                                child.material.emissive.copy(color);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Enhanced particle animations
+            if (particleSystem) {
+                const positions = particleSystem.geometry.attributes.position.array;
+                const colors = particleSystem.geometry.attributes.color.array;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    // Floating motion
+                    positions[i + 1] += Math.sin(time * 0.5 + i * 0.01) * 0.02;
+                    positions[i] += Math.sin(time * 0.3 + i * 0.005) * 0.01;
+                    positions[i + 2] += Math.cos(time * 0.3 + i * 0.005) * 0.01;
+                    
+                    // Color shifting
+                    const colorIndex = i / 3;
+                    const hue = (time * 0.1 + colorIndex * 0.01) % 1;
+                    const color = new THREE.Color().setHSL(hue, 0.7, 0.6);
+                    colors[i] = color.r;
+                    colors[i + 1] = color.g;
+                    colors[i + 2] = color.b;
+                }
+                
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+                particleSystem.geometry.attributes.color.needsUpdate = true;
+                particleSystem.rotation.y += 0.001;
+            }
+            
+            // Magic particles animation
+            if (magicParticles) {
+                const magicPositions = magicParticles.geometry.attributes.position.array;
+                
+                for (let i = 0; i < magicPositions.length; i += 3) {
+                    magicPositions[i + 1] += Math.sin(time * 2 + i * 0.1) * 0.03;
+                    magicPositions[i] += Math.sin(time * 1.5 + i * 0.05) * 0.02;
+                    magicPositions[i + 2] += Math.cos(time * 1.5 + i * 0.05) * 0.02;
+                }
+                
+                magicParticles.geometry.attributes.position.needsUpdate = true;
+                magicParticles.rotation.y -= 0.002;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        async function enterVR() {
+            const vrMessage = document.getElementById('vrMessage');
+            const vrStatus = document.getElementById('vrStatus');
+            
+            if (!navigator.xr) {
+                vrMessage.innerHTML = '❌ WebXR not supported.<br><strong>Please use the Meta Quest Browser</strong><br>1. Open Quest Browser on your headset<br>2. Navigate to this page<br>3. Click "Enter VR Experience"';
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 8000);
+                return;
+            }
+            
+            try {
+                vrMessage.innerHTML = '🥽 <strong>Starting VR session...</strong><br>Put on your headset and get ready for magic!';
+                vrStatus.style.display = 'block';
+                
+                // Request session with enhanced features
+                const sessionInit = {
+                    requiredFeatures: ['local-floor'],
+                    optionalFeatures: ['bounded-floor', 'hand-tracking', 'layers']
+                };
+                
+                const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+                
+                // Set up session with better event handling
+                session.addEventListener('end', () => {
+                    vrMessage.innerHTML = '✨ <strong>VR session ended!</strong><br>Thanks for visiting the magical garden!<br>You can restart anytime.';
+                    vrStatus.style.display = 'block';
+                    setTimeout(() => vrStatus.style.display = 'none', 5000);
+                });
+                
+                await renderer.xr.setSession(session);
+                
+                vrMessage.innerHTML = '🌸 <strong>Welcome to your magical garden!</strong><br>• Use thumbsticks to move around<br>• Point and trigger to interact with flowers<br>• Grip to pick up and move flowers<br>• Try passthrough mode for mixed reality!';
+                setTimeout(() => vrStatus.style.display = 'none', 4000);
+                
+                // Auto-enable audio in VR if not already enabled
+                if (!audioEnabled) {
+                    try {
+                        await toggleAudio();
+                    } catch (e) {
+                        console.log('Audio auto-enable failed, user can enable manually');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('VR session error:', error);
+                vrMessage.innerHTML = '❌ <strong>VR failed to start</strong><br>Make sure your Quest 2 is connected and permissions are granted.<br>Try refreshing the page and ensure you\'re using the Quest Browser.';
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 8000);
+            }
+        }
+        
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Start the enhanced application
+        init();
+    </script>
+</body>
+</html>
