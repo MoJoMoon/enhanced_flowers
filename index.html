@@ -360,6 +360,7 @@
         }
         
         function createGround() {
+            // Create flat solid green ground base
             const groundGeometry = new THREE.PlaneGeometry(100, 100);
             const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x3a5f3a });
             const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -367,19 +368,90 @@
             ground.receiveShadow = true;
             scene.add(ground);
             
-            // Add grass patches
-            for (let i = 0; i < 50; i++) {
+            // Add detailed grass patches with varying colors on top
+            const grassColors = [0x2d4a2d, 0x3a5f3a, 0x4a7c4a, 0x5a8f5a];
+            for (let i = 0; i < 60; i++) {
                 const grassPatch = new THREE.Mesh(
-                    new THREE.PlaneGeometry(2, 2),
-                    new THREE.MeshLambertMaterial({ color: 0x4a7c4a })
+                    new THREE.PlaneGeometry(3 + Math.random() * 2, 3 + Math.random() * 2),
+                    new THREE.MeshLambertMaterial({ 
+                        color: grassColors[Math.floor(Math.random() * grassColors.length)],
+                        transparent: true,
+                        opacity: 0.6
+                    })
                 );
                 grassPatch.rotation.x = -Math.PI / 2;
                 grassPatch.position.set(
+                    (Math.random() - 0.5) * 90,
+                    0.02,
+                    (Math.random() - 0.5) * 90
+                );
+                scene.add(grassPatch);
+            }
+            
+            // Add rocks scattered around
+            const rockColors = [0x4a4a4a, 0x5a5a5a, 0x3a3a3a, 0x6a6a6a];
+            for (let i = 0; i < 25; i++) {
+                const rockSize = 0.3 + Math.random() * 0.8;
+                const rock = new THREE.Mesh(
+                    new THREE.SphereGeometry(rockSize, 8, 6).scale(
+                        1 + Math.random() * 0.5, 
+                        0.5 + Math.random() * 0.5, 
+                        1 + Math.random() * 0.5
+                    ),
+                    new THREE.MeshLambertMaterial({ 
+                        color: rockColors[Math.floor(Math.random() * rockColors.length)]
+                    })
+                );
+                
+                rock.position.set(
+                    (Math.random() - 0.5) * 90,
+                    rockSize * 0.3,
+                    (Math.random() - 0.5) * 90
+                );
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                scene.add(rock);
+            }
+            
+            // Add small water puddles
+            for (let i = 0; i < 8; i++) {
+                const puddle = new THREE.Mesh(
+                    new THREE.CircleGeometry(1 + Math.random() * 2, 16),
+                    new THREE.MeshPhongMaterial({ 
+                        color: 0x4a90e2,
+                        transparent: true,
+                        opacity: 0.7,
+                        shininess: 100
+                    })
+                );
+                puddle.rotation.x = -Math.PI / 2;
+                puddle.position.set(
                     (Math.random() - 0.5) * 60,
                     0.01,
                     (Math.random() - 0.5) * 60
                 );
-                scene.add(grassPatch);
+                scene.add(puddle);
+            }
+            
+            // Add small bushes
+            for (let i = 0; i < 15; i++) {
+                const bush = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5 + Math.random() * 0.5, 8, 6).scale(
+                        1 + Math.random() * 0.3, 
+                        0.6 + Math.random() * 0.4, 
+                        1 + Math.random() * 0.3
+                    ),
+                    new THREE.MeshLambertMaterial({ color: 0x2d5016 })
+                );
+                
+                bush.position.set(
+                    (Math.random() - 0.5) * 85,
+                    0.3,
+                    (Math.random() - 0.5) * 85
+                );
+                bush.castShadow = true;
+                bush.receiveShadow = true;
+                scene.add(bush);
             }
         }
         
@@ -923,19 +995,19 @@
                 });
             }
             
-            // Add surrounding rainbow flowers
-            const radius = 8;
-            const surroundingFlowers = 24;
-            
-            for (let i = 0; i < surroundingFlowers; i++) {
-                const angle = (i / surroundingFlowers) * Math.PI * 2;
-                const distance = radius + Math.sin(i * 0.5) * 2;
+            // Add just a few scattered decorative flowers for ambiance (reduced from 24 to 8)
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 12 + Math.random() * 8; // Farther out to not interfere with letters
+                
+                const x = Math.cos(angle) * distance;
+                const z = Math.sin(angle) * distance;
                 
                 const flower = createFlower(
-                    Math.cos(angle) * distance,
-                    Math.random() * 2 + 1,
-                    Math.sin(angle) * distance,
+                    x,
                     1 + Math.random() * 0.5,
+                    z,
+                    0.8 + Math.random() * 0.4,
                     true // Rainbow mode
                 );
                 
@@ -943,7 +1015,7 @@
                 scene.add(flower);
             }
             
-            // Add floating petals
+            // Add floating petals (reduced count)
             createFloatingPetals();
         }
         
@@ -966,7 +1038,7 @@
         }
         
         function createFloatingPetals() {
-            const petalCount = 30;
+            const petalCount = 20; // Reduced from 30 to 20
             
             for (let i = 0; i < petalCount; i++) {
                 const petalGeometry = new THREE.SphereGeometry(0.1, 6, 4);
