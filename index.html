@@ -294,6 +294,7 @@
         let selectedFlower = null;
         let raycaster = new THREE.Raycaster();
         let tempMatrix = new THREE.Matrix4();
+        let isInitialized = false;
         
         // Enhanced particle systems
         let particleSystem, magicParticles, petalParticles;
@@ -301,10 +302,27 @@
         // Animation mixers for complex animations
         let animationMixers = [];
         
+        // Loading management
+        function hideLoadingIndicator() {
+            const loadingEl = document.getElementById('loadingIndicator');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+        }
+        
+        function showLoadingIndicator(message = 'Loading...') {
+            const loadingEl = document.getElementById('loadingIndicator');
+            if (loadingEl) {
+                loadingEl.innerHTML = '<h3>🌸 ' + message + '</h3><div class="loading-spinner"></div><p>Preparing your magical garden...</p>';
+                loadingEl.style.display = 'block';
+            }
+        }
+        
         // Initialize everything
         async function init() {
             try {
                 console.log('Starting enhanced initialization...');
+                showLoadingIndicator('Initializing VR Flower Experience');
                 
                 // Create scene with better atmosphere
                 scene = new THREE.Scene();
@@ -332,12 +350,6 @@
                 
                 document.body.appendChild(renderer.domElement);
                 
-                // Check VR support
-                await checkVRSupport();
-                
-                // Hide loading indicator
-                document.getElementById('loadingIndicator').style.display = 'none';
-                
                 // Enhanced lighting setup
                 setupEnhancedLighting();
                 
@@ -362,13 +374,22 @@
                 // Create initial walkable bouquet for immersion
                 createWalkableBouquet();
                 
+                // Check VR support after everything is loaded
+                await checkVRSupport();
+                
+                // Mark as initialized
+                isInitialized = true;
+                
+                // Hide loading indicator after everything is ready
+                hideLoadingIndicator();
+                
                 console.log('Enhanced initialization complete!');
                 
             } catch (error) {
                 console.error('Initialization error:', error);
                 const loadingEl = document.getElementById('loadingIndicator');
                 if (loadingEl) {
-                    loadingEl.innerHTML = '<h3>❌ Loading Error</h3><p>Please refresh and try again.</p>';
+                    loadingEl.innerHTML = '<h3>❌ Loading Error</h3><p>Please refresh and try again. Error: ' + error.message + '</p>';
                 }
             }
         }
@@ -1946,7 +1967,19 @@
             const vrMessage = document.getElementById('vrMessage');
             const vrStatus = document.getElementById('vrStatus');
             
+            console.log('Attempting to enter VR...');
+            
+            // Check if initialization is complete
+            if (!isInitialized) {
+                console.log('System not fully initialized yet');
+                vrMessage.innerHTML = '⏳ <strong>Please wait...</strong><br>The experience is still loading.<br>Try again in a moment.';
+                vrStatus.style.display = 'block';
+                setTimeout(() => vrStatus.style.display = 'none', 3000);
+                return;
+            }
+            
             if (!navigator.xr) {
+                console.log('WebXR not supported');
                 vrMessage.innerHTML = '❌ WebXR not supported.<br><strong>Please use the Meta Quest Browser</strong><br>1. Open Quest Browser on your headset<br>2. Navigate to this page<br>3. Click "Enter VR Experience"';
                 vrStatus.style.display = 'block';
                 setTimeout(() => vrStatus.style.display = 'none', 8000);
@@ -1954,25 +1987,41 @@
             }
             
             try {
+                console.log('Checking VR session support...');
+                const supported = await navigator.xr.isSessionSupported('immersive-vr');
+                
+                if (!supported) {
+                    console.log('VR session not supported');
+                    vrMessage.innerHTML = '❌ <strong>VR not available</strong><br>Please make sure:<br>• You\'re using Meta Quest Browser<br>• WebXR is enabled<br>• Headset is properly connected';
+                    vrStatus.style.display = 'block';
+                    setTimeout(() => vrStatus.style.display = 'none', 8000);
+                    return;
+                }
+                
+                console.log('VR session supported, requesting session...');
                 vrMessage.innerHTML = '🥽 <strong>Starting VR session...</strong><br>Put on your headset and get ready for magic!';
                 vrStatus.style.display = 'block';
                 
-                // Request session with enhanced features
+                // Request session with basic features first
                 const sessionInit = {
-                    requiredFeatures: ['local-floor'],
-                    optionalFeatures: ['bounded-floor', 'hand-tracking', 'layers']
+                    requiredFeatures: ['local-floor']
                 };
                 
+                console.log('Requesting VR session with features:', sessionInit);
                 const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+                console.log('VR session obtained successfully');
                 
                 // Set up session with better event handling
                 session.addEventListener('end', () => {
+                    console.log('VR session ended');
                     vrMessage.innerHTML = '✨ <strong>VR session ended!</strong><br>Thanks for visiting the magical garden!<br>You can restart anytime.';
                     vrStatus.style.display = 'block';
                     setTimeout(() => vrStatus.style.display = 'none', 5000);
                 });
                 
+                console.log('Setting renderer XR session...');
                 await renderer.xr.setSession(session);
+                console.log('VR session started successfully!');
                 
                 vrMessage.innerHTML = '🌸 <strong>Welcome to your magical garden!</strong><br>• Use thumbsticks to move around<br>• Point and trigger to interact with flowers<br>• Grip to pick up and move flowers<br>• Try passthrough mode for mixed reality!';
                 setTimeout(() => vrStatus.style.display = 'none', 4000);
@@ -1980,17 +2029,18 @@
                 // Auto-enable audio in VR if not already enabled
                 if (!audioEnabled) {
                     try {
+                        console.log('Auto-enabling audio for VR...');
                         await toggleAudio();
                     } catch (e) {
-                        console.log('Audio auto-enable failed, user can enable manually');
+                        console.log('Audio auto-enable failed:', e);
                     }
                 }
                 
             } catch (error) {
                 console.error('VR session error:', error);
-                vrMessage.innerHTML = '❌ <strong>VR failed to start</strong><br>Make sure your Quest 2 is connected and permissions are granted.<br>Try refreshing the page and ensure you\'re using the Quest Browser.';
+                vrMessage.innerHTML = '❌ <strong>VR failed to start</strong><br>Error: ' + error.message + '<br><br>Try:<br>• Refreshing the page<br>• Using Meta Quest Browser<br>• Checking headset connection';
                 vrStatus.style.display = 'block';
-                setTimeout(() => vrStatus.style.display = 'none', 8000);
+                setTimeout(() => vrStatus.style.display = 'none', 10000);
             }
         }
         
